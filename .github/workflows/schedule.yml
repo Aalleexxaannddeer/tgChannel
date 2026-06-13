@@ -25,7 +25,7 @@ jobs:
 
       - name: Run script
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         run: python main.py

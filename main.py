@@ -2,7 +2,7 @@ import os
 import requests
 import time
 
-HF_TOKEN = os.getenv("HF_TOKEN")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 
@@ -19,11 +19,21 @@ SYSTEM_PROMPT = """
 """
 
 def get_ai_insight():
-    url = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct"
-    headers = {"Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "application/json"}
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/Aalleexxaannddeer/tgChannel",
+        "X-Title": "Telegram Auto Insights Bot"
+    }
     payload = {
-        "inputs": f"<|im_start|>system\n{SYSTEM_PROMPT}<|im_end|>\n<|im_start|>user\nСгенерируй инсайт.<|im_end|>\n<|im_start|>assistant\n",
-        "parameters": {"max_new_tokens": 500, "temperature": 0.7, "return_full_text": False}
+        "model": "meta-llama/llama-3.3-70b-instruct:free",
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": "Сгенерируй инсайт."}
+        ],
+        "temperature": 0.7,
+        "max_tokens": 500
     }
     
     for attempt in range(3):
@@ -31,22 +41,11 @@ def get_ai_insight():
             response = requests.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
             result = response.json()
-            if isinstance(result, list) and "generated_text" in result[0]:
-                return result[0]["generated_text"].strip()
-            elif "generated_text" in result:
-                return result["generated_text"].strip()
-            else:
-                raise ValueError("Неожиданный формат ответа ИИ")
-        except requests.exceptions.HTTPError as e:
-            if "503" in str(e):
-                print(f"Модель загружается, ожидание 20 сек... (Попытка {attempt + 1})")
-                time.sleep(20)
-            else:
-                print(f"Ошибка API: {e}")
-                return None
-        except Exception as e:
-            print(f"Критическая ошибка: {e}")
-            return None
+            return result["choices"][0]["message"]["content"].strip()
+        except requests.exceptions.RequestException as e:
+            print(f"Попытка {attempt + 1} не удалась: {e}")
+            if attempt < 2:
+                time.sleep(5)
     return None
 
 def format_for_telegram(raw_text):
